@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Session not found' }, { status: 404 });
     }
 
-    const isEscalated = session.status === 'handed_over' || !!session.conversation_id;
+    const isEscalated = session.status === 'handed_over' && !!session.conversation_id;
 
     if (isEscalated && session.conversation_id) {
       const newMessages = await getLatestAgentMessages(session.conversation_id, afterId || undefined);

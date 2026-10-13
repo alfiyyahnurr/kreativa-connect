@@ -1,8 +1,12 @@
 import { google } from '@ai-sdk/google';
 
-// Fallback to gemini-3.8-flash if unset or if legacy gemini-1.5-flash is passed
+// Default to stable gemini-3.5-flash-lite to prevent 503 high demand spikes on free tier
 const rawModel = process.env.AI_MODEL_DEFAULT || '';
-const modelName = rawModel && rawModel !== 'gemini-1.5-flash' ? rawModel : 'gemini-3.8-flash';
+export const activeModelName =
+  rawModel && rawModel !== 'gemini-1.5-flash' && rawModel !== 'gemini-3.8-flash' && rawModel !== 'gemini-2.5-flash'
+    ? rawModel
+    : 'gemini-3.5-flash-lite';
 
-// Direct Google Gemini API (Free Tier: 15 RPM, 1,500 RPD)
-export const defaultGeminiModel = google(modelName);
+export const defaultGeminiModel = google(activeModelName);
+export const fallbackGeminiModel = google('gemini-3.1-flash-lite');
+

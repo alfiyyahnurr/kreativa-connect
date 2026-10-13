@@ -76,7 +76,53 @@ export function InboxClient({
 
   const selectedConv = conversations.find((c) => c.id === selectedId);
 
-  // Fetch messages when selectedId changes
+  // 1. Polling daftar percakapan CRM secara real-time (setiap 3 detik)
+  useEffect(() => {
+    let isPolling = false;
+
+    const pollConversations = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (isPolling) return;
+      isPolling = true;
+
+      try {
+        const res = await fetch('/api/conversations?schoolId=1');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.conversations && Array.isArray(data.conversations)) {
+            setConversations((prev) => {
+              // Jika daftar percakapan berubah atau bertambah, update state
+              if (
+                prev.length !== data.conversations.length ||
+                prev[0]?.id !== data.conversations[0]?.id ||
+                prev[0]?.updated_at !== data.conversations[0]?.updated_at
+              ) {
+                return data.conversations;
+              }
+              return prev;
+            });
+
+            // Jika belum ada yang dipilih dan ada percakapan baru masuk
+            setSelectedId((prev) => {
+              if (!prev && data.conversations.length > 0) {
+                return data.conversations[0].id;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        // Silently catch background error
+      } finally {
+        isPolling = false;
+      }
+    };
+
+    const interval = setInterval(pollConversations, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 2. Fetch awal saat selectedId berubah
   useEffect(() => {
     if (!selectedId) return;
 
@@ -104,6 +150,49 @@ export function InboxClient({
     return () => {
       isMounted = false;
     };
+  }, [selectedId]);
+
+  // 3. Polling pesan masuk secara real-time pada percakapan yang sedang aktif (setiap 2 detik)
+  useEffect(() => {
+    if (!selectedId) return;
+
+    let isPolling = false;
+
+    const pollMessages = async () => {
+      if (typeof document !== 'undefined' && document.hidden) return;
+      if (isPolling) return;
+      isPolling = true;
+
+      try {
+        const res = await fetch(`/api/conversations/${selectedId}/messages`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.messages && Array.isArray(data.messages)) {
+            setMessages((prev) => {
+              if (
+                prev.length !== data.messages.length ||
+                prev[prev.length - 1]?.id !== data.messages[data.messages.length - 1]?.id
+              ) {
+                setTimeout(() => {
+                  if (chatBodyRef.current) {
+                    chatBodyRef.current.scrollTop = chatBodyRef.current.scrollHeight;
+                  }
+                }, 50);
+                return data.messages;
+              }
+              return prev;
+            });
+          }
+        }
+      } catch (err) {
+        // Silently catch
+      } finally {
+        isPolling = false;
+      }
+    };
+
+    const interval = setInterval(pollMessages, 2000);
+    return () => clearInterval(interval);
   }, [selectedId]);
 
   // Handle reply submit
@@ -396,28 +485,30 @@ export function InboxClient({
                     Memuat pesan...
                   </div>
                 ) : (
-                  messages.map((m) => {
-                    const isAgent = m.role === 'agent';
-                    const isInternal = m.role === 'internal_note';
-                    const timeFormatted = new Date(m.created_at).toLocaleTimeString('id-ID', {
-                      hour: '2-digit',
-                      minute: '2-digit',
-                    });
+                  messages
+                    .filter((m) => m.role !== 'bot' && m.source !== 'ai' && m.source !== 'flow' && m.source !== 'faq')
+                    .map((m) => {
+                      const isAgent = m.role === 'agent';
+                      const isInternal = m.role === 'internal_note';
+                      const timeFormatted = new Date(m.created_at).toLocaleTimeString('id-ID', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      });
 
-                    return (
-                      <div
-                        key={m.id}
-                        className={`msg ${isAgent ? 'agent' : ''} ${isInternal ? 'internal' : ''}`}
-                      >
-                        {m.content}
-                        <small>
-                          {isInternal ? 'Catatan internal · ' : ''}
-                          {m.sender_name ? `${m.sender_name} · ` : ''}
-                          {timeFormatted}
-                        </small>
-                      </div>
-                    );
-                  })
+                      return (
+                        <div
+                          key={m.id}
+                          className={`msg ${isAgent ? 'agent' : ''} ${isInternal ? 'internal' : ''}`}
+                        >
+                          {m.content}
+                          <small>
+                            {isInternal ? 'Catatan internal · ' : ''}
+                            {m.sender_name ? `${m.sender_name} · ` : ''}
+                            {timeFormatted}
+                          </small>
+                        </div>
+                      );
+                    })
                 )}
               </div>
 

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getConversationMessages, createAgentMessage, createInternalNote } from '@/lib/queries/messages';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> }

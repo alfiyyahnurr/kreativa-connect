@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { streamText } from 'ai';
-import { defaultGeminiModel } from '@/lib/ai/gemini';
+import { defaultGeminiModel, fallbackGeminiModel } from '@/lib/ai/gemini';
 import { searchKnowledgeForGrounding } from '@/lib/queries/knowledge';
 import { getFeeStructuresBySchool } from '@/lib/queries/fees';
 import { saveChatbotMessage } from '@/lib/queries/chatbot';
@@ -70,25 +70,49 @@ ${faqContext || 'Tidak ada FAQ spesifik yang cocok langsung.'}
 ${feeContext || 'Biaya resmi dapat dikonfirmasi langsung ke tim Admission.'}
 `;
 
-    const result = streamText({
-      model: defaultGeminiModel,
-      system: systemPrompt,
-      messages,
-      async onFinish({ text }) {
-        if (sessionId && text) {
-          try {
-            await saveChatbotMessage({
-              sessionId,
-              role: 'bot',
-              source: 'ai',
-              content: text,
-            });
-          } catch (e) {
-            console.error('Failed to save AI reply to database:', e);
+    let result;
+    try {
+      result = streamText({
+        model: defaultGeminiModel,
+        system: systemPrompt,
+        messages,
+        async onFinish({ text }) {
+          if (sessionId && text) {
+            try {
+              await saveChatbotMessage({
+                sessionId,
+                role: 'bot',
+                source: 'ai',
+                content: text,
+              });
+            } catch (e) {
+              console.error('Failed to save AI reply to database:', e);
+            }
           }
-        }
-      },
-    });
+        },
+      });
+    } catch (modelErr) {
+      console.warn('Default model error, falling back to secondary Gemini model:', modelErr);
+      result = streamText({
+        model: fallbackGeminiModel,
+        system: systemPrompt,
+        messages,
+        async onFinish({ text }) {
+          if (sessionId && text) {
+            try {
+              await saveChatbotMessage({
+                sessionId,
+                role: 'bot',
+                source: 'ai',
+                content: text,
+              });
+            } catch (e) {
+              console.error('Failed to save AI reply to database:', e);
+            }
+          }
+        },
+      });
+    }
 
     return result.toTextStreamResponse();
   } catch (error: any) {

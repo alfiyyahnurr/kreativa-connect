@@ -3,6 +3,8 @@ import Link from 'next/link';
 import { getOverviewMetrics } from '@/lib/queries/analytics';
 import { Icon } from '@/components/Icons';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AdminOverviewPage() {
   const metrics = await getOverviewMetrics(1);

@@ -63,6 +63,8 @@ export async function getConversationsList(filter: ConversationFilter = {}): Pro
         SELECT content, created_at, role
         FROM messages m
         WHERE m.conversation_id = c.id
+          AND m.role IN ('parent', 'agent', 'internal_note')
+          AND m.source IN ('human', 'system')
         ORDER BY m.created_at DESC
         LIMIT 1
       ) lm ON TRUE
@@ -92,6 +94,8 @@ export async function getConversationsList(filter: ConversationFilter = {}): Pro
         SELECT content, created_at, role
         FROM messages m
         WHERE m.conversation_id = c.id
+          AND m.role IN ('parent', 'agent', 'internal_note')
+          AND m.source IN ('human', 'system')
         ORDER BY m.created_at DESC
         LIMIT 1
       ) lm ON TRUE
@@ -121,6 +125,8 @@ export async function getConversationsList(filter: ConversationFilter = {}): Pro
         SELECT content, created_at, role
         FROM messages m
         WHERE m.conversation_id = c.id
+          AND m.role IN ('parent', 'agent', 'internal_note')
+          AND m.source IN ('human', 'system')
         ORDER BY m.created_at DESC
         LIMIT 1
       ) lm ON TRUE
@@ -149,6 +155,8 @@ export async function getConversationsList(filter: ConversationFilter = {}): Pro
         SELECT content, created_at, role
         FROM messages m
         WHERE m.conversation_id = c.id
+          AND m.role IN ('parent', 'agent', 'internal_note')
+          AND m.source IN ('human', 'system')
         ORDER BY m.created_at DESC
         LIMIT 1
       ) lm ON TRUE

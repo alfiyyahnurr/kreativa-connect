@@ -210,11 +210,19 @@ export async function updateSessionCurrentNode(
   sessionId: number | string,
   nodeId: number | string
 ): Promise<void> {
-  await sql`
-    UPDATE chatbot_sessions
-    SET current_node_id = ${nodeId}, updated_at = NOW()
-    WHERE id = ${sessionId}
-  `;
+  if (String(nodeId) === '1') {
+    await sql`
+      UPDATE chatbot_sessions
+      SET current_node_id = ${nodeId}, status = 'active', conversation_id = NULL, updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+  } else {
+    await sql`
+      UPDATE chatbot_sessions
+      SET current_node_id = ${nodeId}, updated_at = NOW()
+      WHERE id = ${sessionId}
+    `;
+  }
 }
 
 export async function saveChatbotMessage(data: {
@@ -241,34 +249,6 @@ export async function saveChatbotMessage(data: {
     RETURNING *
   `) as ChatbotMessage[];
   const saved = rows[0];
-
-  // Mirror to CRM messages table if session is connected to a conversation
-  try {
-    const sessionRows = (await sql`
-      SELECT conversation_id FROM chatbot_sessions WHERE id = ${data.sessionId} LIMIT 1
-    `) as { conversation_id: string | null }[];
-
-    if (sessionRows.length > 0 && sessionRows[0]?.conversation_id) {
-      const convId = sessionRows[0].conversation_id;
-      const crmRole = data.role === 'user' ? 'parent' : 'bot';
-      const crmSource = data.role === 'user' ? 'human' : data.source === 'ai' ? 'ai' : 'system';
-
-      await sql`
-        INSERT INTO messages (
-          conversation_id, role, source, content, is_visible_to_parent, created_at
-        ) VALUES (
-          ${convId},
-          ${crmRole},
-          ${crmSource},
-          ${data.content},
-          TRUE,
-          NOW()
-        )
-      `;
-    }
-  } catch (err) {
-    console.error('Failed to mirror chatbot message to CRM conversation:', err);
-  }
 
   return saved;
 }
@@ -331,30 +311,8 @@ export async function escalateToCrmConversation(
     WHERE id = ${sessionId}
   `;
 
-  // 5. Transfer session history to CRM messages table
-  const msgs = await getSessionMessages(sessionId);
-  for (const m of msgs) {
-    const role = m.role === 'user' ? 'parent' : 'bot';
-    let msgSource: 'human' | 'ai' | 'system' = 'system';
-    if (m.role === 'user') msgSource = 'human';
-    else if (m.source === 'ai') msgSource = 'ai';
-    else msgSource = 'system';
-
-    await sql`
-      INSERT INTO messages (
-        conversation_id, role, source, content, is_visible_to_parent, created_at
-      ) VALUES (
-        ${conversationId},
-        ${role},
-        ${msgSource},
-        ${m.content},
-        TRUE,
-        ${m.created_at}
-      )
-    `;
-  }
-
-  // 6. System handover alert note
+  // 5. System handover alert note (clean notification for staff)
+  const parentLabel = session.parent_name ? `${session.parent_name} (${session.parent_phone || 'WhatsApp'})` : 'Orang Tua';
   await sql`
     INSERT INTO messages (
       conversation_id, role, source, content, is_visible_to_parent
@@ -362,7 +320,7 @@ export async function escalateToCrmConversation(
       ${conversationId},
       'internal_note',
       'system',
-      ${`Parent meminta dihubungkan ke staff manusia (${teamName}). Sesi live chat berhasil dialihkan ke CRM inbox.`},
+      ${`🟢 Parent ${parentLabel} telah terhubung ke Tim ${teamName}. Siap melayani konsultasi langsung.`},
       FALSE
     )
   `;
@@ -395,49 +353,23 @@ export async function getSessionDetailsByToken(
   const session = await getSessionByToken(sessionToken);
   if (!session) return null;
 
-  const isEscalated = session.status === 'handed_over' || !!session.conversation_id;
+  const isEscalated = session.status === 'handed_over' && !!session.conversation_id;
   let formattedMessages: FormattedSessionMessage[] = [];
 
+  // Ambil seluruh pesan sesi (interaksi flow, AI, dan chat orang tua) dari chatbot_messages
+  const botMsgs = await getSessionMessages(session.id);
+  const formattedBotMsgs: FormattedSessionMessage[] = botMsgs.map((m) => ({
+    id: `bot_${m.id}`,
+    role: m.role === 'bot' ? 'bot' : 'user',
+    source: m.source,
+    content: m.content,
+    createdAt: m.created_at,
+  }));
+
+  let formattedAgentMsgs: FormattedSessionMessage[] = [];
   if (session.conversation_id) {
-    // Sesi sudah terhubung ke CRM: sinkronkan pesan chatbot yang belum masuk ke CRM messages
-    try {
-      const unsynced = (await sql`
-        SELECT cm.* FROM chatbot_messages cm
-        WHERE cm.session_id = ${session.id}
-          AND NOT EXISTS (
-            SELECT 1 FROM messages m
-            WHERE m.conversation_id = ${session.conversation_id}
-              AND m.content = cm.content
-              AND (
-                (cm.role = 'user' AND m.role = 'parent') OR
-                (cm.role = 'bot' AND m.role = 'bot')
-              )
-          )
-        ORDER BY cm.created_at ASC
-      `) as ChatbotMessage[];
-
-      for (const cm of unsynced) {
-        const crmRole = cm.role === 'user' ? 'parent' : 'bot';
-        const crmSource = cm.role === 'user' ? 'human' : cm.source === 'ai' ? 'ai' : 'system';
-        await sql`
-          INSERT INTO messages (
-            conversation_id, role, source, content, is_visible_to_parent, created_at
-          ) VALUES (
-            ${session.conversation_id},
-            ${crmRole},
-            ${crmSource},
-            ${cm.content},
-            TRUE,
-            ${cm.created_at}
-          )
-        `;
-      }
-    } catch (syncErr) {
-      console.error('Error syncing unsynced chatbot messages:', syncErr);
-    }
-
-    // Ambil seluruh percakapan yang visible bagi parent
-    const crmMsgs = (await sql`
+    // Ambil hanya balasan resmi dari Tim Admission/Staff (role = 'agent')
+    const agentMsgs = (await sql`
       SELECT 
         m.id,
         m.conversation_id,
@@ -449,6 +381,7 @@ export async function getSessionDetailsByToken(
       FROM messages m
       LEFT JOIN users u ON u.id = m.sent_by_user_id
       WHERE m.conversation_id = ${session.conversation_id}
+        AND m.role = 'agent'
         AND m.is_visible_to_parent = TRUE
       ORDER BY m.created_at ASC, m.id ASC
     `) as Array<{
@@ -461,32 +394,20 @@ export async function getSessionDetailsByToken(
       sender_name: string | null;
     }>;
 
-    formattedMessages = crmMsgs.map((m) => {
-      let mappedRole: 'bot' | 'user' | 'agent' = 'bot';
-      if (m.role === 'parent') mappedRole = 'user';
-      else if (m.role === 'agent') mappedRole = 'agent';
-      else if (m.role === 'bot') mappedRole = 'bot';
-
-      return {
-        id: String(m.id),
-        role: mappedRole,
-        source: m.source,
-        content: m.content,
-        senderName: m.role === 'agent' ? (m.sender_name || 'Tim Admission') : undefined,
-        createdAt: m.created_at,
-      };
-    });
-  } else {
-    // Sesi aktif dengan bot/AI: ambil dari chatbot_messages
-    const botMsgs = await getSessionMessages(session.id);
-    formattedMessages = botMsgs.map((m) => ({
-      id: String(m.id),
-      role: m.role === 'bot' ? 'bot' : 'user',
+    formattedAgentMsgs = agentMsgs.map((m) => ({
+      id: `agent_${m.id}`,
+      role: 'agent',
       source: m.source,
       content: m.content,
+      senderName: m.sender_name || 'Tim Admission',
       createdAt: m.created_at,
     }));
   }
+
+  // Gabungkan dan urutkan sesuai kronologi waktu
+  formattedMessages = [...formattedBotMsgs, ...formattedAgentMsgs].sort(
+    (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+  );
 
   let currentNode: ChatbotNodeWithOptions | null = null;
   if (session.current_node_id) {

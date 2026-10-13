@@ -781,7 +781,7 @@ export default function ChatWidgetPage() {
       return;
     }
 
-    // If escalated to human staff / CRM: forward message directly to CRM conversation
+    // If escalated to human staff / CRM: forward message directly to CRM conversation for staff visibility
     if (isEscalated && userText) {
       try {
         await fetch('/api/chatbot/session/message', {
@@ -795,7 +795,7 @@ export default function ChatWidgetPage() {
       } catch (err) {
         console.error('Failed to forward message to CRM:', err);
       }
-      return;
+      // Continue to AI response so parent receives an immediate, intelligent answer
     }
 
     // Process user question text via Gemini AI Streaming
@@ -896,7 +896,10 @@ export default function ChatWidgetPage() {
   const handleResetToRoot = async () => {
     const timeNow = getRealtimeClock();
 
-    // 1. Tampilkan respon user
+    // 1. Tampilkan respon user & kembalikan status sesi ke mode bot/AI aktif
+    setIsEscalated(false);
+    setHasChattedWithAi(false);
+
     setMessages((prev) => [
       ...prev,
       {
@@ -1267,7 +1270,7 @@ export default function ChatWidgetPage() {
                   </div>
                 )}
 
-                <form onSubmit={handleStartChat} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <form onSubmit={handleStartChat} suppressHydrationWarning style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                   <div>
                     <label
                       style={{
@@ -1288,6 +1291,7 @@ export default function ChatWidgetPage() {
                       value={parentName}
                       onChange={(e) => setParentName(e.target.value)}
                       required
+                      suppressHydrationWarning
                     />
                   </div>
 
@@ -1312,6 +1316,7 @@ export default function ChatWidgetPage() {
                       value={parentPhone}
                       onChange={(e) => setParentPhone(e.target.value)}
                       required
+                      suppressHydrationWarning
                     />
                   </div>
 
@@ -1334,6 +1339,7 @@ export default function ChatWidgetPage() {
                       value={isParent}
                       onChange={(e) => setIsParent(e.target.value)}
                       required
+                      suppressHydrationWarning
                     >
                       <option value="">Pilih status...</option>
                       <option value="ya">Ya, orang tua siswa aktif Kreativa</option>
@@ -1355,6 +1361,7 @@ export default function ChatWidgetPage() {
                       }}
                       type="submit"
                       disabled={submitting}
+                      suppressHydrationWarning
                     >
                       {submitting ? 'Menghubungkan ke CRM...' : 'Mulai Percakapan →'}
                     </button>

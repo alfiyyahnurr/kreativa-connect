@@ -2,6 +2,8 @@ import React from 'react';
 import { getAdmissionBoardRecords } from '@/lib/queries/admission';
 import { AdmissionClient } from './AdmissionClient';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
 
 export default async function AdmissionPage() {
   const records = await getAdmissionBoardRecords(1);

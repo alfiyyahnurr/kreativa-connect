@@ -28,6 +28,8 @@ export async function getConversationMessages(
       FROM messages m
       LEFT JOIN users u ON u.id = m.sent_by_user_id
       WHERE m.conversation_id = ${conversationId}
+        AND m.role != 'bot'
+        AND m.source NOT IN ('flow', 'faq', 'ai')
       ORDER BY m.created_at ASC, m.id ASC
     `;
   } else {
@@ -41,6 +43,8 @@ export async function getConversationMessages(
       LEFT JOIN users u ON u.id = m.sent_by_user_id
       WHERE m.conversation_id = ${conversationId}
         AND m.is_visible_to_parent = TRUE
+        AND m.role != 'bot'
+        AND m.source NOT IN ('flow', 'faq', 'ai')
       ORDER BY m.created_at ASC, m.id ASC
     `;
   }
