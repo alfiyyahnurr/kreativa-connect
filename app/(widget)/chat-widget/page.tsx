@@ -29,6 +29,11 @@ interface SelectedMedia {
   dataUrl: string;
 }
 
+// Feature Flag: Enable/disable manual text typing and generative AI chat.
+// Default: false (Guided Suggestion Flow only, per supervisor's instruction).
+// Can be toggled via environment variable: NEXT_PUBLIC_ENABLE_AI_CHAT="true"
+const ENABLE_AI_MANUAL_CHAT = process.env.NEXT_PUBLIC_ENABLE_AI_CHAT === 'true';
+
 // Realtime clock helper (HH:mm in user's local real time)
 const getRealtimeClock = (): string => {
   const now = new Date();
@@ -732,6 +737,7 @@ export default function ChatWidgetPage() {
   // Handle sending free-text message or media
   const handleSendMessage = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
+    if (!ENABLE_AI_MANUAL_CHAT) return;
     if (aiStreaming) return;
     if (!inputText.trim() && !selectedMedia) return;
 
@@ -1773,280 +1779,307 @@ export default function ChatWidgetPage() {
                   flexShrink: 0,
                 }}
               >
-                {/* Selected Media Preview Bar (Before sending) */}
-                {selectedMedia && (
-                  <div
-                    style={{
-                      padding: '8px 12px',
-                      background: '#f8fafc',
-                      borderRadius: '14px',
-                      border: '1px solid #e2e8f0',
-                      marginBottom: '8px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '12px',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
-                      {selectedMedia.type.startsWith('image/') ? (
-                        <img
-                          src={selectedMedia.dataUrl}
-                          alt="Preview"
+                {ENABLE_AI_MANUAL_CHAT ? (
+                  <>
+                    {/* Selected Media Preview Bar (Before sending) */}
+                    {selectedMedia && (
+                      <div
+                        style={{
+                          padding: '8px 12px',
+                          background: '#f8fafc',
+                          borderRadius: '14px',
+                          border: '1px solid #e2e8f0',
+                          marginBottom: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          gap: '12px',
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: 0 }}>
+                          {selectedMedia.type.startsWith('image/') ? (
+                            <img
+                              src={selectedMedia.dataUrl}
+                              alt="Preview"
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                objectFit: 'cover',
+                                borderRadius: '8px',
+                                border: '1px solid #cbd5e1',
+                              }}
+                            />
+                          ) : (
+                            <div
+                              style={{
+                                width: '40px',
+                                height: '40px',
+                                background: '#ee3779',
+                                color: 'white',
+                                borderRadius: '8px',
+                                display: 'grid',
+                                placeItems: 'center',
+                                fontSize: '20px',
+                                flexShrink: 0,
+                              }}
+                            >
+                              📄
+                            </div>
+                          )}
+                          <div style={{ minWidth: 0 }}>
+                            <div
+                              style={{
+                                fontSize: '12px',
+                                fontWeight: 700,
+                                color: '#1e293b',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {selectedMedia.name}
+                            </div>
+                            <small style={{ fontSize: '10px', color: '#64748b' }}>
+                              {selectedMedia.size} • Siap dikirim
+                            </small>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedMedia(null)}
                           style={{
-                            width: '40px',
-                            height: '40px',
-                            objectFit: 'cover',
-                            borderRadius: '8px',
-                            border: '1px solid #cbd5e1',
-                          }}
-                        />
-                      ) : (
-                        <div
-                          style={{
-                            width: '40px',
-                            height: '40px',
-                            background: '#ee3779',
-                            color: 'white',
-                            borderRadius: '8px',
+                            border: 'none',
+                            background: '#e2e8f0',
+                            borderRadius: '50%',
+                            width: '24px',
+                            height: '24px',
                             display: 'grid',
                             placeItems: 'center',
-                            fontSize: '20px',
-                            flexShrink: 0,
+                            cursor: 'pointer',
+                            color: '#475569',
+                            fontSize: '11px',
                           }}
+                          title="Batalkan lampiran"
                         >
-                          📄
-                        </div>
-                      )}
-                      <div style={{ minWidth: 0 }}>
+                          ✕
+                        </button>
+                      </div>
+                    )}
+
+                    {/* Emoji Picker Modal/Drawer (Image 2) */}
+                    {showEmojiPicker && (
+                      <div
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '16px',
+                          border: '1px solid #e2e8f0',
+                          boxShadow: '0 -4px 20px rgba(0,0,0,0.07)',
+                          marginBottom: '8px',
+                          overflow: 'hidden',
+                          animation: 'fadeIn 0.15s ease',
+                        }}
+                      >
+                        {/* Header: Title "Emoji" on Left, Close "✕" on Right */}
                         <div
                           style={{
-                            fontSize: '12px',
-                            fontWeight: 700,
-                            color: '#1e293b',
-                            whiteSpace: 'nowrap',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 14px 6px 14px',
                           }}
                         >
-                          {selectedMedia.name}
+                          <span style={{ fontSize: '13.5px', fontWeight: 650, color: '#374151' }}>
+                            Emoji
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setShowEmojiPicker(false)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#9ca3af',
+                              fontSize: '16px',
+                              cursor: 'pointer',
+                              padding: '2px 4px',
+                              lineHeight: 1,
+                            }}
+                            title="Tutup"
+                          >
+                            ✕
+                          </button>
                         </div>
-                        <small style={{ fontSize: '10px', color: '#64748b' }}>
-                          {selectedMedia.size} • Siap dikirim
-                        </small>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedMedia(null)}
-                      style={{
-                        border: 'none',
-                        background: '#e2e8f0',
-                        borderRadius: '50%',
-                        width: '24px',
-                        height: '24px',
-                        display: 'grid',
-                        placeItems: 'center',
-                        cursor: 'pointer',
-                        color: '#475569',
-                        fontSize: '11px',
-                      }}
-                      title="Batalkan lampiran"
-                    >
-                      ✕
-                    </button>
-                  </div>
-                )}
 
-                {/* Emoji Picker Modal/Drawer (Image 2) */}
-                {showEmojiPicker && (
+                        {/* Category Tabs: 8 categories exactly matching Image 2 */}
+                        <div
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '4px 10px 8px 10px',
+                            borderBottom: '1px solid #f1f5f9',
+                            gap: '2px',
+                          }}
+                        >
+                          {(Object.keys(EMOJI_CATEGORIES) as EmojiCategoryKey[]).map((catKey) => {
+                            const cat = EMOJI_CATEGORIES[catKey];
+                            const isActive = activeEmojiCat === catKey;
+                            return (
+                              <button
+                                key={catKey}
+                                type="button"
+                                className="wa-emoji-tab"
+                                onClick={() => setActiveEmojiCat(catKey)}
+                                style={{
+                                  background: isActive ? '#00a884' : 'transparent',
+                                  color: isActive ? '#ffffff' : '#374151',
+                                  padding: isActive ? '5px 10px' : '5px 8px',
+                                  opacity: isActive ? 1 : 0.8,
+                                }}
+                                title={cat.name}
+                              >
+                                <span>{cat.icon}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* 7-Column Emoji Grid (Matches Image 2) */}
+                        <div
+                          style={{
+                            display: 'grid',
+                            gridTemplateColumns: 'repeat(7, 1fr)',
+                            gap: '4px',
+                            padding: '10px 10px',
+                            maxHeight: '210px',
+                            overflowY: 'auto',
+                          }}
+                        >
+                          {EMOJI_CATEGORIES[activeEmojiCat].emojis.map((emoji, i) => (
+                            <button
+                              key={i}
+                              type="button"
+                              className="emoji-tile-7col"
+                              onClick={() => handleInsertEmoji(emoji)}
+                            >
+                              {emoji}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Hidden File Input for Media Uploads */}
+                    <input
+                      type="file"
+                      ref={fileInputRef}
+                      style={{ display: 'none' }}
+                      onChange={handleFileSelect}
+                      accept="image/*,.pdf,.doc,.docx"
+                    />
+
+                    {/* Capsule Input Pill with Right-Side Icons (WhatsApp Style) */}
+                    <form
+                      onSubmit={handleSendMessage}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        background: '#ffffff',
+                        border: showEmojiPicker ? '1.5px solid #00a884' : '1.5px solid #dbe2ea',
+                        borderRadius: '9999px',
+                        padding: '3px 4px 3px 16px',
+                        boxShadow: showEmojiPicker ? '0 0 0 3px rgba(0, 168, 132, 0.15)' : '0 2px 6px rgba(0,0,0,0.03)',
+                        transition: 'all 0.2s ease',
+                      }}
+                    >
+                      {/* Left: Text Input */}
+                      <input
+                        ref={inputRef}
+                        style={{
+                          flex: 1,
+                          border: 'none',
+                          background: 'transparent',
+                          fontSize: '13.5px',
+                          color: '#1f2937',
+                          outline: 'none',
+                          padding: '8px 0',
+                          minWidth: 0,
+                        }}
+                        placeholder={
+                          selectedMedia
+                            ? 'Ketik keterangan dokumen/foto (opsional)...'
+                            : 'Tulis pesan...'
+                        }
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        disabled={aiStreaming}
+                      />
+
+                      {/* Right: Group of 3 Action Icons (Smiley Icon -> Paperclip Icon -> WhatsApp Send Button) */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0, marginLeft: '6px' }}>
+                        {/* 1. Emoji Outline Icon Button */}
+                        <button
+                          type="button"
+                          className="wa-icon-btn"
+                          onClick={() => setShowEmojiPicker((prev) => !prev)}
+                          style={{
+                            background: showEmojiPicker ? '#00a884' : 'transparent',
+                            color: showEmojiPicker ? '#ffffff' : '#64748b',
+                          }}
+                          title="Pilih Emoji"
+                        >
+                          <SmileyIcon />
+                        </button>
+
+                        {/* 2. Paperclip Media Attachment Icon Button */}
+                        <button
+                          type="button"
+                          className="wa-icon-btn"
+                          onClick={() => fileInputRef.current?.click()}
+                          style={{
+                            background: selectedMedia ? '#e7f7ef' : 'transparent',
+                            color: selectedMedia ? '#00a884' : '#64748b',
+                          }}
+                          title="Lampirkan Dokumen / Gambar"
+                        >
+                          <PaperclipIcon />
+                        </button>
+
+                        {/* 3. Circular WhatsApp Send Button */}
+                        <button
+                          type="submit"
+                          className="wa-send-btn"
+                          disabled={aiStreaming || (!inputText.trim() && !selectedMedia)}
+                          title="Kirim pesan"
+                        >
+                          <SendAirplaneIcon />
+                        </button>
+                      </div>
+                    </form>
+                  </>
+                ) : (
+                  /* Guided Mode Footer (Suggestion-Only) */
                   <div
                     style={{
-                      background: '#ffffff',
-                      borderRadius: '16px',
-                      border: '1px solid #e2e8f0',
-                      boxShadow: '0 -4px 20px rgba(0,0,0,0.07)',
-                      marginBottom: '8px',
-                      overflow: 'hidden',
-                      animation: 'fadeIn 0.15s ease',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      padding: '11px 16px',
+                      background: '#f8fafc',
+                      borderRadius: '12px',
+                      border: '1px dashed #cbd5e1',
+                      color: '#64748b',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      lineHeight: 1.4,
+                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
                     }}
                   >
-                    {/* Header: Title "Emoji" on Left, Close "✕" on Right */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '10px 14px 6px 14px',
-                      }}
-                    >
-                      <span style={{ fontSize: '13.5px', fontWeight: 650, color: '#374151' }}>
-                        Emoji
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => setShowEmojiPicker(false)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#9ca3af',
-                          fontSize: '16px',
-                          cursor: 'pointer',
-                          padding: '2px 4px',
-                          lineHeight: 1,
-                        }}
-                        title="Tutup"
-                      >
-                        ✕
-                      </button>
-                    </div>
-
-                    {/* Category Tabs: 8 categories exactly matching Image 2 */}
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '4px 10px 8px 10px',
-                        borderBottom: '1px solid #f1f5f9',
-                        gap: '2px',
-                      }}
-                    >
-                      {(Object.keys(EMOJI_CATEGORIES) as EmojiCategoryKey[]).map((catKey) => {
-                        const cat = EMOJI_CATEGORIES[catKey];
-                        const isActive = activeEmojiCat === catKey;
-                        return (
-                          <button
-                            key={catKey}
-                            type="button"
-                            className="wa-emoji-tab"
-                            onClick={() => setActiveEmojiCat(catKey)}
-                            style={{
-                              background: isActive ? '#00a884' : 'transparent',
-                              color: isActive ? '#ffffff' : '#374151',
-                              padding: isActive ? '5px 10px' : '5px 8px',
-                              opacity: isActive ? 1 : 0.8,
-                            }}
-                            title={cat.name}
-                          >
-                            <span>{cat.icon}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    {/* 7-Column Emoji Grid (Matches Image 2) */}
-                    <div
-                      style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(7, 1fr)',
-                        gap: '4px',
-                        padding: '10px 10px',
-                        maxHeight: '210px',
-                        overflowY: 'auto',
-                      }}
-                    >
-                      {EMOJI_CATEGORIES[activeEmojiCat].emojis.map((emoji, i) => (
-                        <button
-                          key={i}
-                          type="button"
-                          className="emoji-tile-7col"
-                          onClick={() => handleInsertEmoji(emoji)}
-                        >
-                          {emoji}
-                        </button>
-                      ))}
-                    </div>
+                    <span style={{ fontSize: '15px' }}>💡</span>
+                    <span>Silakan pilih salah satu opsi menu di atas untuk melanjutkan informasi</span>
                   </div>
                 )}
-
-                {/* Hidden File Input for Media Uploads */}
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  style={{ display: 'none' }}
-                  onChange={handleFileSelect}
-                  accept="image/*,.pdf,.doc,.docx"
-                />
-
-                {/* Capsule Input Pill with Right-Side Icons (WhatsApp Style) */}
-                <form
-                  onSubmit={handleSendMessage}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    background: '#ffffff',
-                    border: showEmojiPicker ? '1.5px solid #00a884' : '1.5px solid #dbe2ea',
-                    borderRadius: '9999px',
-                    padding: '3px 4px 3px 16px',
-                    boxShadow: showEmojiPicker ? '0 0 0 3px rgba(0, 168, 132, 0.15)' : '0 2px 6px rgba(0,0,0,0.03)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  {/* Left: Text Input */}
-                  <input
-                    ref={inputRef}
-                    style={{
-                      flex: 1,
-                      border: 'none',
-                      background: 'transparent',
-                      fontSize: '13.5px',
-                      color: '#1f2937',
-                      outline: 'none',
-                      padding: '8px 0',
-                      minWidth: 0,
-                    }}
-                    placeholder={
-                      selectedMedia
-                        ? 'Ketik keterangan dokumen/foto (opsional)...'
-                        : 'Tulis pesan...'
-                    }
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    disabled={aiStreaming}
-                  />
-
-                  {/* Right: Group of 3 Action Icons (Smiley Icon -> Paperclip Icon -> WhatsApp Send Button) */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '3px', flexShrink: 0, marginLeft: '6px' }}>
-                    {/* 1. Emoji Outline Icon Button (Turns solid WhatsApp green when active) */}
-                    <button
-                      type="button"
-                      className="wa-icon-btn"
-                      onClick={() => setShowEmojiPicker((prev) => !prev)}
-                      style={{
-                        background: showEmojiPicker ? '#00a884' : 'transparent',
-                        color: showEmojiPicker ? '#ffffff' : '#64748b',
-                      }}
-                      title="Pilih Emoji"
-                    >
-                      <SmileyIcon />
-                    </button>
-
-                    {/* 2. Paperclip Media Attachment Icon Button */}
-                    <button
-                      type="button"
-                      className="wa-icon-btn"
-                      onClick={() => fileInputRef.current?.click()}
-                      style={{
-                        background: selectedMedia ? '#e7f7ef' : 'transparent',
-                        color: selectedMedia ? '#00a884' : '#64748b',
-                      }}
-                      title="Lampirkan Dokumen / Gambar"
-                    >
-                      <PaperclipIcon />
-                    </button>
-
-                    {/* 3. Circular WhatsApp Send Button */}
-                    <button
-                      type="submit"
-                      className="wa-send-btn"
-                      disabled={aiStreaming || (!inputText.trim() && !selectedMedia)}
-                      title="Kirim pesan"
-                    >
-                      <SendAirplaneIcon />
-                    </button>
-                  </div>
-                </form>
               </div>
             </div>
           )}
