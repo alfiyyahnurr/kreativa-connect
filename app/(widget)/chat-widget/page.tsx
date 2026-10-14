@@ -1768,21 +1768,20 @@ export default function ChatWidgetPage() {
                 </div>
               )}
 
-              {/* Bottom Interactive Area (Selected Media Preview + Emoji Picker + Capsule Input) */}
-              <div
-                style={{
-                  background: '#fff',
-                  borderTop: '1px solid #eef0f5',
-                  padding: '10px 12px 12px 12px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  flexShrink: 0,
-                }}
-              >
-                {ENABLE_AI_MANUAL_CHAT ? (
-                  <>
-                    {/* Selected Media Preview Bar (Before sending) */}
-                    {selectedMedia && (
+              {/* Bottom Interactive Area (Only shown when manual chat / AI is enabled) */}
+              {ENABLE_AI_MANUAL_CHAT && (
+                <div
+                  style={{
+                    background: '#fff',
+                    borderTop: '1px solid #eef0f5',
+                    padding: '10px 12px 12px 12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    flexShrink: 0,
+                  }}
+                >
+                  {/* Selected Media Preview Bar (Before sending) */}
+                  {selectedMedia && (
                       <div
                         style={{
                           padding: '8px 12px',
@@ -2055,32 +2054,8 @@ export default function ChatWidgetPage() {
                         </button>
                       </div>
                     </form>
-                  </>
-                ) : (
-                  /* Guided Mode Footer (Suggestion-Only) */
-                  <div
-                    style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      padding: '11px 16px',
-                      background: '#f8fafc',
-                      borderRadius: '12px',
-                      border: '1px dashed #cbd5e1',
-                      color: '#64748b',
-                      fontSize: '12px',
-                      fontWeight: 600,
-                      textAlign: 'center',
-                      lineHeight: 1.4,
-                      boxShadow: '0 1px 3px rgba(0,0,0,0.02)',
-                    }}
-                  >
-                    <span style={{ fontSize: '15px' }}>💡</span>
-                    <span>Silakan pilih salah satu opsi menu di atas untuk melanjutkan informasi</span>
-                  </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
 
