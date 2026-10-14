@@ -562,7 +562,7 @@ export async function sendParentMessageToCrm(
 export async function closeSessionByToken(sessionToken: string): Promise<boolean> {
   const res = await sql`
     UPDATE chatbot_sessions
-    SET status = 'closed', updated_at = NOW()
+    SET status = 'ended', updated_at = NOW()
     WHERE session_token = ${sessionToken}
     RETURNING id
   `;
