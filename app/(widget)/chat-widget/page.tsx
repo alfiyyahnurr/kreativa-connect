@@ -1673,7 +1673,7 @@ export default function ChatWidgetPage() {
                       {/* Text content if present */}
                       {m.content && <div>{renderMessageContent(m.content)}</div>}
 
-                      {/* Realtime timestamp & double checkmarks */}
+                      {/* Realtime timestamp */}
                       <div
                         style={{
                           alignSelf: 'flex-end',
@@ -1683,24 +1683,9 @@ export default function ChatWidgetPage() {
                           marginLeft: '12px',
                           display: 'inline-flex',
                           alignItems: 'center',
-                          gap: '3px',
                         }}
                       >
                         <span>{m.time}</span>
-                        {isUser && (
-                          <svg
-                            width="14"
-                            height="10"
-                            viewBox="0 0 16 11"
-                            fill="none"
-                            style={{ color: '#53bdeb' }}
-                          >
-                            <path
-                              d="M11.05 0.7L4.7 7.05L1.95 4.3L0.9 5.35L4.7 9.15L12.1 1.75L11.05 0.7ZM15.05 0.7L8.7 7.05L7.9 6.25L6.85 7.3L8.7 9.15L16.1 1.75L15.05 0.7Z"
-                              fill="currentColor"
-                            />
-                          </svg>
-                        )}
                       </div>
                     </div>
                   );
