@@ -1176,6 +1176,25 @@ svg {
   font-weight: 800;
 }
 
+.mini-detail {
+  font-size: 11px;
+  margin: 7px 0;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mini-detail strong {
+  font-weight: 700;
+}
+
+.footnote {
+  font-size: 10px;
+  color: #8e92a5;
+  margin-top: 13px;
+  line-height: 1.7;
+}
+
 /* Modals & Overlays */
 .modal-wrap {
   position: fixed;
