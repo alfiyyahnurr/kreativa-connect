@@ -19,6 +19,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY && !process.env.GEMINI_API_KEY && !process.env.GOOGLE_API_KEY) {
+      console.error('CRITICAL: GOOGLE_GENERATIVE_AI_API_KEY is not set in environment variables');
+      return new Response(
+        JSON.stringify({ error: 'GOOGLE_GENERATIVE_AI_API_KEY belum dikonfigurasi di Environment Variables Vercel.' }),
+        { status: 500, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
     const { messages, sessionId, schoolId = 1 } = await req.json();
 
     const lastMessage = messages[messages.length - 1];
@@ -26,32 +34,43 @@ export async function POST(req: NextRequest) {
 
     // Record user message if sessionId provided
     if (sessionId && userQuery) {
-      await saveChatbotMessage({
-        sessionId,
-        role: 'user',
-        source: 'ai',
-        content: userQuery,
-      });
+      try {
+        await saveChatbotMessage({
+          sessionId,
+          role: 'user',
+          source: 'ai',
+          content: userQuery,
+        });
+      } catch (e) {
+        console.warn('Failed to save user message to database:', e);
+      }
     }
 
-    // 1. Fetch grounded knowledge base
-    const matchedFaqs = await searchKnowledgeForGrounding(schoolId, userQuery, 4);
+    // 1. Fetch grounded knowledge base (safe fallback)
+    let faqContext = '';
+    try {
+      const matchedFaqs = await searchKnowledgeForGrounding(schoolId, userQuery, 4);
+      faqContext = (matchedFaqs || [])
+        .map((f) => `Q: ${f.title}\nA: ${f.answer}`)
+        .join('\n\n');
+    } catch (faqErr) {
+      console.warn('searchKnowledgeForGrounding error:', faqErr);
+    }
 
-    // 2. Fetch fee structures for context
-    const feeStructures = await getFeeStructuresBySchool(schoolId);
-
-    // 3. Construct knowledge context
-    const faqContext = matchedFaqs
-      .map((f) => `Q: ${f.title}\nA: ${f.answer}`)
-      .join('\n\n');
-
-    const feeContext = feeStructures
-      .slice(0, 3)
-      .map((fs) => {
-        const items = fs.items.map((i) => `  - ${i.item_name} (${i.grade_label}): Rp ${Number(i.amount).toLocaleString('id-ID')} [${i.period_label}]`).join('\n');
-        return `Jenjang: ${fs.level_name} (${fs.campus}, TA ${fs.academic_year})\nSkema: ${fs.scheme_name}\nBiaya Registrasi: Rp ${Number(fs.registration_fee).toLocaleString('id-ID')}\nRincian:\n${items}\nInclusions: ${fs.inclusions || '-'}\nCatatan: ${fs.notes || '-'}`;
-      })
-      .join('\n\n');
+    // 2. Fetch fee structures for context (safe fallback)
+    let feeContext = '';
+    try {
+      const feeStructures = await getFeeStructuresBySchool(schoolId);
+      feeContext = (feeStructures || [])
+        .slice(0, 3)
+        .map((fs) => {
+          const items = (fs.items || []).map((i) => `  - ${i.item_name} (${i.grade_label}): Rp ${Number(i.amount).toLocaleString('id-ID')} [${i.period_label}]`).join('\n');
+          return `Jenjang: ${fs.level_name} (${fs.campus}, TA ${fs.academic_year})\nSkema: ${fs.scheme_name}\nBiaya Registrasi: Rp ${Number(fs.registration_fee).toLocaleString('id-ID')}\nRincian:\n${items}\nInclusions: ${fs.inclusions || '-'}\nCatatan: ${fs.notes || '-'}`;
+        })
+        .join('\n\n');
+    } catch (feeErr) {
+      console.warn('getFeeStructuresBySchool error:', feeErr);
+    }
 
     const systemPrompt = `Anda adalah asisten virtual resmi untuk Kreativa Global School dan SD Talenta Juara (Bandung, Cimahi, Pekanbaru).
 Tugas Anda adalah melayani pertanyaan orang tua siswa dengan ramah, santun, jelas, dan Islami (Assalamu'alaikum).
@@ -76,6 +95,9 @@ ${feeContext || 'Biaya resmi dapat dikonfirmasi langsung ke tim Admission.'}
         model: defaultGeminiModel,
         system: systemPrompt,
         messages,
+        onError({ error }) {
+          console.error('Gemini Stream Error:', error);
+        },
         async onFinish({ text }) {
           if (sessionId && text) {
             try {
@@ -97,6 +119,9 @@ ${feeContext || 'Biaya resmi dapat dikonfirmasi langsung ke tim Admission.'}
         model: fallbackGeminiModel,
         system: systemPrompt,
         messages,
+        onError({ error }) {
+          console.error('Fallback Gemini Stream Error:', error);
+        },
         async onFinish({ text }) {
           if (sessionId && text) {
             try {

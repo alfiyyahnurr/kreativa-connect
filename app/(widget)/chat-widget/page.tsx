@@ -818,7 +818,10 @@ export default function ChatWidgetPage() {
           }),
         });
 
-        if (!res.ok) throw new Error('AI service error');
+        if (!res.ok) {
+          const errData = await res.json().catch(() => null);
+          throw new Error(errData?.error || `Layanan AI sedang gangguan (${res.status}).`);
+        }
 
         const reader = res.body?.getReader();
         const decoder = new TextDecoder();
@@ -849,7 +852,23 @@ export default function ChatWidgetPage() {
             );
           }
         }
-      } catch (err) {
+
+        // Jika stream kosong / tidak mengirim teks
+        if (!botContent.trim()) {
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === botId
+                ? {
+                    ...m,
+                    content:
+                      'Maaf, layanan AI tidak menerima respon. Silakan pastikan GOOGLE_GENERATIVE_AI_API_KEY telah ditambahkan di Environment Variables Vercel.',
+                    time: getRealtimeClock(),
+                  }
+                : m
+            )
+          );
+        }
+      } catch (err: any) {
         console.error('AI chat failed:', err);
         setMessages((prev) => [
           ...prev,
@@ -857,6 +876,7 @@ export default function ChatWidgetPage() {
             id: `bot_err_${Date.now()}`,
             role: 'bot',
             content:
+              err?.message ||
               'Maaf, terjadi gangguan pada sistem AI. Kami dapat menghubungkan Anda langsung dengan tim Admission sekolah.',
             time: getRealtimeClock(),
           },

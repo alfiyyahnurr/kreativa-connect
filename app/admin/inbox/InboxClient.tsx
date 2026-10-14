@@ -486,7 +486,7 @@ export function InboxClient({
                   </div>
                 ) : (
                   messages
-                    .filter((m) => m.role !== 'bot' && m.source !== 'ai' && m.source !== 'flow' && m.source !== 'faq')
+                    .filter((m) => m.role !== 'bot' && m.source !== 'ai')
                     .map((m) => {
                       const isAgent = m.role === 'agent';
                       const isInternal = m.role === 'internal_note';
