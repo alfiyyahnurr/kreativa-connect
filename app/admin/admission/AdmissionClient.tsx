@@ -3,7 +3,20 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Icon } from '@/components/Icons';
-import { AdmissionCardItem, ADMISSION_STAGES } from '@/lib/queries/admission';
+import type { AdmissionCardItem } from '@/lib/queries/admission';
+
+export const ADMISSION_STAGES = [
+  { id: 'registered', label: '1. Registered' },
+  { id: 'assessment_scheduled', label: '2. Assessment Scheduled' },
+  { id: 'assessment_completed', label: '3. Assessment Completed' },
+  { id: 'parent_interview', label: '4. Parent Interview' },
+  { id: 'selection_result', label: '5. Selection Result' },
+  { id: 'accepted', label: '6. Accepted' },
+  { id: 'confirmation_letter_pending', label: '7. Letter Pending' },
+  { id: 'first_payment_pending', label: '8. Payment Pending' },
+  { id: 'payment_verification', label: '9. Verifying Payment' },
+  { id: 'enrollment_completed', label: '10. Enrolled' },
+] as const;
 
 export function AdmissionClient({
   initialRecords = [],

@@ -156,8 +156,10 @@ export default async function AdmissionPage() {
   let records: AdmissionCardItem[] = [];
 
   try {
-    records = await getAdmissionBoardRecords(1);
-    if (!records || records.length === 0) {
+    const raw = await getAdmissionBoardRecords(1);
+    if (raw && raw.length > 0) {
+      records = JSON.parse(JSON.stringify(raw));
+    } else {
       records = FALLBACK_ADMISSION_RECORDS;
     }
   } catch (error) {

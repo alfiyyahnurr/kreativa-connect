@@ -34,9 +34,14 @@ export default function AdmissionError({
         <h2 style={{ fontSize: '18px', marginBottom: '8px', letterSpacing: '-0.4px' }}>
           Gagal Memuat Halaman Admission
         </h2>
-        <p className="sub" style={{ marginBottom: '24px', lineHeight: 1.6 }}>
-          Terjadi kendala saat menghubungkan ke data pendaftaran. Silakan klik tombol di bawah untuk mencoba memuat ulang.
+        <p className="sub" style={{ marginBottom: '16px', lineHeight: 1.6 }}>
+          Terjadi kendala saat memuat data pendaftaran. Silakan klik tombol di bawah untuk mencoba memuat ulang.
         </p>
+        {error?.message && (
+          <p style={{ fontSize: '11px', color: '#888', marginBottom: '20px', fontFamily: 'monospace' }}>
+            {error.message}
+          </p>
+        )}
         <div style={{ display: 'flex', justifyContent: 'center', gap: '10px' }}>
           <button
             className="button primary"
