@@ -61,10 +61,10 @@ function stripEmojis(text: string): string {
 }
 
 // Outline SVG Logout Icon for ending/exiting chat session
-const LogoutIcon = () => (
+const LogoutIcon = ({ size = 16 }: { size?: number }) => (
   <svg
-    width="13"
-    height="13"
+    width={size}
+    height={size}
     viewBox="0 0 24 24"
     fill="none"
     stroke="currentColor"
@@ -1448,78 +1448,30 @@ export default function ChatWidgetPage() {
                   </div>
                 </div>
 
-                {/* Actions: Logout Button + WhatsApp Brand Badge */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                {/* Actions: Logout Button (Icon only) */}
+                <div style={{ display: 'flex', alignItems: 'center' }}>
                   <button
                     type="button"
                     onClick={() => setShowLogoutModal(true)}
                     style={{
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '4px',
-                      padding: '5px 9px',
-                      borderRadius: '8px',
+                      width: '32px',
+                      height: '32px',
+                      borderRadius: '50%',
                       border: '1px solid #fee2e2',
                       background: '#fef2f2',
                       color: '#dc2626',
-                      fontSize: '11px',
-                      fontWeight: 700,
+                      display: 'grid',
+                      placeItems: 'center',
                       cursor: 'pointer',
                       transition: 'all 0.15s ease',
                     }}
                     title="Keluar Sesi / Ganti Nomor"
+                    aria-label="Keluar Sesi"
                   >
-                    <LogoutIcon />
-                    <span>Keluar</span>
+                    <LogoutIcon size={16} />
                   </button>
-
-                  <div
-                    style={{
-                      width: '32px',
-                      height: '32px',
-                      borderRadius: '50%',
-                      background: '#25d366',
-                      display: 'grid',
-                      placeItems: 'center',
-                      color: 'white',
-                    }}
-                    title="Official WhatsApp Simulator"
-                  >
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
-                      <path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.93.55 3.73 1.5 5.27L2 22l4.98-1.59c1.5 1 3.29 1.56 5.06 1.56 5.46 0 9.91-4.45 9.91-9.91S17.5 2 12.04 2zm5.78 13.92c-.24.67-1.39 1.25-1.92 1.32-.5.06-1.15.1-3.32-.79-2.77-1.15-4.56-3.95-4.7-4.14-.14-.19-1.12-1.49-1.12-2.84 0-1.35.71-2.02.96-2.29.25-.27.55-.34.73-.34.18 0 .36 0 .52.01.17.01.4.06.61.56.22.52.74 1.8.8 1.94.07.13.11.29.02.48-.09.19-.14.3-.27.46-.14.16-.29.35-.42.47-.14.14-.29.29-.12.57.16.29.72 1.18 1.55 1.91 1.07.95 1.96 1.24 2.24 1.38.28.14.44.12.61-.07.16-.19.7-.81.89-1.09.18-.28.37-.23.62-.14.25.09 1.6.75 1.87.89.28.14.46.21.53.32.07.11.07.67-.17 1.34z" />
-                    </svg>
-                  </div>
                 </div>
               </div>
-
-              {/* Status Banner when Escalated to Admin */}
-              {isEscalated && (
-                <div
-                  style={{
-                    background: '#f0fdf4',
-                    borderBottom: '1px solid #bbf7d0',
-                    padding: '6px 14px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '7px',
-                    fontSize: '11px',
-                    color: '#166534',
-                    fontWeight: 650,
-                    flexShrink: 0,
-                  }}
-                >
-                  <span
-                    style={{
-                      width: '7px',
-                      height: '7px',
-                      borderRadius: '50%',
-                      background: '#22c55e',
-                      boxShadow: '0 0 0 2px rgba(34, 197, 94, 0.3)',
-                    }}
-                  />
-                  <span>Terhubung ke Tim Admission • Balasan staff terpantau aktif</span>
-                </div>
-              )}
 
               {/* Chat Body (Subtle WhatsApp dots wallpaper) */}
               <div
